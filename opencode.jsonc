@@ -1,33 +1,34 @@
 {
   "$schema": "https://opencode.ai/config.json",
 
-  // Restringe o OpenCode à chave da Anthropic.
+  // Restrict OpenCode to the Anthropic provider.
   "enabled_providers": ["anthropic"],
 
-  // Modelo barato como padrão de segurança.
+  // Use the lower-cost model as the safe default.
   "model": "anthropic/claude-haiku-4-5",
   "small_model": "anthropic/claude-haiku-4-5",
 
-  // Sempre começa analisando, sem editar.
+  // Always start in analysis-only mode without editing files.
   "default_agent": "plan",
 
-  // Não gera links públicos das sessões.
+  // Do not generate public session links.
   "share": "disabled",
 
   "provider": {
     "anthropic": {
       "options": {
-        // A chave fica na variável de ambiente, não neste arquivo.
+        // Read the API key from the environment instead of storing it here.
         "apiKey": "{env:ANTHROPIC_API_KEY}",
 
-        // Mantém uma chave consistente para cache.
+        // Use a stable prompt cache key when supported.
         "setCacheKey": true
       },
 
       "models": {
         "claude-sonnet-5": {
           "options": {
-            // Evita tokens extras de raciocínio em tarefas normais.
+            // Claude Sonnet 5 enables adaptive thinking by default.
+            // Disable it for routine tasks to reduce reasoning-token usage.
             "thinking": {
               "type": "disabled"
             }
@@ -40,10 +41,10 @@
   "compaction": {
     "auto": true,
 
-    // Remove resultados antigos de ferramentas do contexto.
+    // Remove old tool results from the active context.
     "prune": true,
 
-    // Reserva espaço para produzir o resumo da sessão.
+    // Reserve enough context space to generate the session summary.
     "reserved": 12000
   },
 
@@ -85,31 +86,31 @@
       "**/credentials*": "deny"
     },
 
-    // Impede o agente de sair da pasta do projeto.
+    // Prevent agents from accessing paths outside the project directory.
     "external_directory": "deny",
 
-    // Evita pesquisas externas automáticas e resultados enormes.
+    // Require approval before external searches or URL fetches.
     "websearch": "ask",
     "webfetch": "ask",
 
-    // Bloqueia repetição idêntica de ferramentas.
+    // Block identical tool calls from repeating in a loop.
     "doom_loop": "deny"
   },
 
   "agent": {
     "plan": {
-      "description": "Planejamento econômico e somente leitura",
+      "description": "Cost-conscious, read-only planning and analysis",
       "mode": "primary",
       "model": "anthropic/claude-haiku-4-5",
 
-      // Evita exploração interminável.
+      // Limit prolonged exploratory loops.
       "steps": 6,
 
       "permission": {
         "edit": "deny",
         "bash": "deny",
 
-        // Permite apenas o explorador barato.
+        // Allow only the lower-cost read-only explorer.
         "task": {
           "*": "deny",
           "explore": "allow"
@@ -118,17 +119,20 @@
     },
 
     "build": {
-      "description": "Implementação controlada com Claude Sonnet",
+      "description": "Controlled implementation with Claude Sonnet",
       "mode": "primary",
       "model": "anthropic/claude-sonnet-5",
 
-      // Sonnet 5 usa adaptive thinking por padrão.
-      // Desativar reduz custo em tarefas comuns.
-      "thinking": {
-        "type": "disabled"
+      // Model-specific agent options belong under "options".
+      "options": {
+        // Claude Sonnet 5 enables adaptive thinking by default.
+        // Disable it for routine implementation work.
+        "thinking": {
+          "type": "disabled"
+        }
       },
 
-      // Limite importante para impedir ciclos caros.
+      // Prevent expensive, open-ended implementation loops.
       "steps": 12,
 
       "permission": {
@@ -137,7 +141,7 @@
         "bash": {
           "*": "ask",
 
-          // Comandos baratos e somente leitura.
+          // Low-risk, read-only commands.
           "git status*": "allow",
           "git diff*": "allow",
           "git log*": "allow",
@@ -145,7 +149,7 @@
           "rg *": "allow",
           "grep *": "allow",
 
-          // Nunca executar automaticamente.
+          // Never run these automatically.
           "git push*": "deny",
           "rm *": "deny"
         },
@@ -161,7 +165,7 @@
     },
 
     "explore": {
-      "description": "Localiza arquivos e código usando Haiku",
+      "description": "Locate files and code with Claude Haiku",
       "mode": "subagent",
       "model": "anthropic/claude-haiku-4-5",
       "steps": 5,
@@ -175,7 +179,7 @@
       }
     },
 
-    // Evita subagentes caros ou paralelos sendo iniciados sozinhos.
+    // Prevent expensive or parallel subagents from starting automatically.
     "general": {
       "disable": true
     },
@@ -185,13 +189,13 @@
     }
   },
 
-  // Não carregue MCPs ou plugins enquanto não forem necessários.
+  // Load no MCP servers or plugins until explicitly required.
   "mcp": {},
   "plugin": [],
 
-  // Mantenha este arquivo curto.
+  // Keep repository-specific instructions in a separate, short file.
   "instructions": ["AGENTS.md"],
 
-  // Ajuda a localizar símbolos sem ler arquivos inteiros.
+  // Enable language-server support for symbol navigation.
   "lsp": true
 }
