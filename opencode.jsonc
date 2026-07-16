@@ -4,31 +4,30 @@
   // Restrict OpenCode to the Anthropic provider.
   "enabled_providers": ["anthropic"],
 
-  // Use the lower-cost model as the safe default.
+  // Use the lower-cost model for normal and lightweight tasks.
   "model": "anthropic/claude-haiku-4-5",
   "small_model": "anthropic/claude-haiku-4-5",
 
-  // Always start in analysis-only mode without editing files.
+  // Always begin with read-only planning.
   "default_agent": "plan",
 
-  // Do not generate public session links.
+  // Disable public session sharing.
   "share": "disabled",
 
   "provider": {
     "anthropic": {
       "options": {
-        // Read the API key from the environment instead of storing it here.
+        // Read the API key from the environment.
         "apiKey": "{env:ANTHROPIC_API_KEY}",
 
-        // Use a stable prompt cache key when supported.
+        // Keep a stable cache key when supported.
         "setCacheKey": true
       },
 
       "models": {
         "claude-sonnet-5": {
           "options": {
-            // Claude Sonnet 5 enables adaptive thinking by default.
-            // Disable it for routine tasks to reduce reasoning-token usage.
+            // Disable adaptive thinking for routine implementation work.
             "thinking": {
               "type": "disabled"
             }
@@ -39,12 +38,13 @@
   },
 
   "compaction": {
+    // Automatically compact long sessions.
     "auto": true,
 
-    // Remove old tool results from the active context.
+    // Remove old tool outputs from the active context.
     "prune": true,
 
-    // Reserve enough context space to generate the session summary.
+    // Keep enough context space available for compaction.
     "reserved": 12000
   },
 
@@ -86,57 +86,71 @@
       "**/credentials*": "deny"
     },
 
-    // Prevent agents from accessing paths outside the project directory.
+    // Prevent access outside the active project.
     "external_directory": "deny",
 
-    // Require approval before external searches or URL fetches.
+    // Require approval before external research.
     "websearch": "ask",
     "webfetch": "ask",
 
-    // Block identical tool calls from repeating in a loop.
+    // Block identical tool calls when the agent appears stuck.
     "doom_loop": "deny"
   },
 
   "agent": {
     "plan": {
-      "description": "Cost-conscious, read-only planning and analysis",
+      "description": "Low-cost, read-only planning and analysis",
       "mode": "primary",
       "model": "anthropic/claude-haiku-4-5",
 
-      // Limit prolonged exploratory loops.
-      "steps": 6,
+      // Keep planning focused and deterministic.
+      "temperature": 0.1,
+
+      // Encourage short answers and minimal repository exploration.
+      "prompt": "Be concise. Inspect only files relevant to the request. Avoid repeated summaries and broad repository scans. Use the explore subagent only when necessary. Stop when the requested plan is complete.",
+
+      // Reduce the maximum number of agentic iterations.
+      "steps": 4,
 
       "permission": {
         "edit": "deny",
         "bash": "deny",
+        "todowrite": "deny",
 
-        // Allow only the lower-cost read-only explorer.
+        // Allow only the low-cost read-only explorer.
         "task": {
           "*": "deny",
           "explore": "allow"
-        }
+        },
+
+        // Keep external research out of routine planning.
+        "websearch": "deny",
+        "webfetch": "deny"
       }
     },
 
     "build": {
-      "description": "Controlled implementation with Claude Sonnet",
+      "description": "Controlled and token-conscious implementation",
       "mode": "primary",
       "model": "anthropic/claude-sonnet-5",
 
-      // Model-specific agent options belong under "options".
-      "options": {
-        // Claude Sonnet 5 enables adaptive thinking by default.
-        // Disable it for routine implementation work.
-        "thinking": {
-          "type": "disabled"
-        }
+      // Keep implementation focused and deterministic.
+      "temperature": 0.1,
+
+      // These additional agent options are passed to Anthropic.
+      "thinking": {
+        "type": "disabled"
       },
 
-      // Prevent expensive, open-ended implementation loops.
-      "steps": 12,
+      // Encourage minimal patches and short completion messages.
+      "prompt": "Make the smallest correct change. Read only relevant files. Avoid broad scans, repeated summaries, speculative work, and unrelated improvements. Do not invoke subagents. Stop after completing and briefly verifying the requested change.",
+
+      // Reduce expensive implementation loops.
+      "steps": 8,
 
       "permission": {
         "edit": "ask",
+        "todowrite": "deny",
 
         "bash": {
           "*": "ask",
@@ -149,15 +163,13 @@
           "rg *": "allow",
           "grep *": "allow",
 
-          // Never run these automatically.
+          // Never execute automatically.
           "git push*": "deny",
           "rm *": "deny"
         },
 
-        "task": {
-          "*": "deny",
-          "explore": "allow"
-        },
+        // Prevent extra model sessions during implementation.
+        "task": "deny",
 
         "websearch": "ask",
         "webfetch": "ask"
@@ -165,21 +177,28 @@
     },
 
     "explore": {
-      "description": "Locate files and code with Claude Haiku",
+      "description": "Locate only the minimum relevant files and symbols",
       "mode": "subagent",
       "model": "anthropic/claude-haiku-4-5",
-      "steps": 5,
+
+      "temperature": 0.1,
+
+      "prompt": "Find only the minimum files, symbols, and code needed for the parent request. Return paths and brief findings. Do not summarize unrelated code or continue after locating the required information.",
+
+      // Keep exploration short.
+      "steps": 3,
 
       "permission": {
         "edit": "deny",
         "bash": "deny",
         "task": "deny",
+        "todowrite": "deny",
         "websearch": "deny",
         "webfetch": "deny"
       }
     },
 
-    // Prevent expensive or parallel subagents from starting automatically.
+    // Disable broad or parallel subagents.
     "general": {
       "disable": true
     },
@@ -189,13 +208,13 @@
     }
   },
 
-  // Load no MCP servers or plugins until explicitly required.
+  // Load no MCP servers or plugins by default.
   "mcp": {},
   "plugin": [],
 
-  // Keep repository-specific instructions in a separate, short file.
+  // Keep project-specific instructions short.
   "instructions": ["AGENTS.md"],
 
-  // Enable language-server support for symbol navigation.
+  // Use language servers to locate symbols without reading entire files.
   "lsp": true
 }
