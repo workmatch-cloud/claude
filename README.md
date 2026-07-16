@@ -78,7 +78,122 @@ Inside the OpenCode TUI, use the following command to review available models:
 
 Model availability depends on the Anthropic account and the model identifiers supported by the installed OpenCode version.
 
-## Installation
+## Install OpenCode
+
+Use one of the official installation methods below.
+
+### Universal Shell Installer
+
+On Linux, macOS, or WSL:
+
+```bash
+curl -fsSL https://opencode.ai/install | bash
+```
+
+Restart the terminal if the installer updates `PATH`, then verify the installation:
+
+```bash
+opencode --version
+```
+
+### npm
+
+With a current Node.js installation:
+
+```bash
+npm install -g opencode-ai
+```
+
+### Bun
+
+```bash
+bun add -g opencode-ai
+```
+
+### Homebrew
+
+```bash
+brew install anomalyco/tap/opencode
+```
+
+### Arch Linux
+
+Using an AUR helper:
+
+```bash
+paru -S opencode
+```
+
+### Windows
+
+OpenCode can run directly on Windows, but the official documentation recommends WSL for the most consistent terminal, filesystem, and development-tool experience.
+
+Install WSL from an elevated PowerShell terminal:
+
+```powershell
+wsl --install
+```
+
+Restart Windows if requested, open the installed Linux distribution, and install OpenCode inside WSL:
+
+```bash
+curl -fsSL https://opencode.ai/install | bash
+opencode --version
+```
+
+For the best filesystem performance, keep repositories inside the WSL filesystem:
+
+```bash
+mkdir -p ~/code
+cd ~/code
+git clone <repository-url>
+cd <repository-directory>
+opencode
+```
+
+Projects stored on Windows drives are available through `/mnt`:
+
+```bash
+cd /mnt/c/Users/YourName/Documents/project
+opencode
+```
+
+### Desktop Application
+
+OpenCode Desktop is available from the official download page for Windows, macOS, and Linux.
+
+The terminal configuration in this repository remains useful when running OpenCode from a terminal or when connecting the Desktop application to an OpenCode server.
+
+When exposing a server beyond localhost, set a server password:
+
+```bash
+OPENCODE_SERVER_PASSWORD="replace-with-a-strong-password" \
+  opencode serve --hostname 0.0.0.0 --port 4096
+```
+
+Do not commit the server password or place it in this repository.
+
+### VS Code, Cursor, Windsurf, and VSCodium
+
+Open the IDE's integrated terminal and run:
+
+```bash
+opencode
+```
+
+OpenCode can install its IDE extension automatically. It can then use the current editor selection and file references as context.
+
+Useful shortcuts on Windows and Linux include:
+
+```text
+Ctrl+Esc        Open or focus OpenCode
+Ctrl+Shift+Esc  Start a new OpenCode terminal session
+Alt+Ctrl+K      Insert a file reference
+```
+
+If automatic installation does not work, search for the OpenCode extension in the IDE extension marketplace.
+
+## Install This Configuration
 
 ### Project-Level Configuration
 
@@ -307,6 +422,357 @@ during a long task when the existing conversation still matters but has become t
 | `explore` | Subagent | Claude Haiku 4.5 | 0.1 | 3 | None |
 | `general` | Disabled | — | — | — | — |
 | `scout` | Disabled | — | — | — | — |
+
+
+## Using This Configuration with Spring Boot
+
+This configuration works best with Spring Boot when each OpenCode session handles one small, clearly defined task.
+
+The recommended workflow is:
+
+```text
+Plan with Haiku
+→ identify the relevant classes and configuration
+→ define the minimum change
+→ define the narrowest useful test
+→ review the plan
+→ switch to Build with Sonnet
+→ implement the approved change
+→ run focused verification
+→ start a new session for the next unrelated task
+```
+
+### Spring Boot Project Requirements
+
+Before starting OpenCode, confirm that the project has:
+
+- the JDK version required by `pom.xml`, `build.gradle`, or `build.gradle.kts`;
+- the Maven Wrapper (`mvnw` and `mvnw.cmd`) or Gradle Wrapper (`gradlew` and `gradlew.bat`);
+- a clean or understood Git working tree;
+- local development configuration that does not expose production credentials;
+- any required local services, such as a database or message broker, documented separately.
+
+Prefer the project wrapper instead of a globally installed Maven or Gradle version.
+
+### Recommended Project Layout
+
+```text
+spring-boot-project/
+├── opencode.jsonc
+├── AGENTS.md
+├── pom.xml
+├── mvnw
+├── mvnw.cmd
+├── src/
+│   ├── main/
+│   │   ├── java/
+│   │   └── resources/
+│   └── test/
+│       └── java/
+└── target/
+```
+
+For Gradle projects, replace `pom.xml` and the Maven wrapper files with the corresponding Gradle files.
+
+Build output such as `target/` or `build/` must not be edited.
+
+### Recommended Spring Boot `AGENTS.md`
+
+Keep this file aligned with the actual project. Do not claim a Java, Spring Boot, Maven, Gradle, database, or testing version that the project does not use.
+
+```md
+# Project Instructions
+
+## Technology
+
+- Read the Java and Spring Boot versions from the build file.
+- Use the project Maven or Gradle Wrapper.
+- Follow the existing package structure and coding style.
+
+## Development Rules
+
+- Make the smallest change required by the task.
+- Do not modify unrelated classes or dependencies.
+- Do not edit generated files or build output.
+- Prefer constructor injection.
+- Keep controllers focused on HTTP concerns.
+- Keep business logic in services.
+- Keep persistence logic in repositories.
+- Preserve existing API contracts unless the task explicitly changes them.
+- Do not add dependencies unless they are required and approved.
+- Do not override Spring Boot managed dependency versions without explaining why.
+- Never expose credentials, tokens, connection strings, or environment values.
+
+## Verification
+
+- Run the narrowest relevant test first.
+- Use full test suites only after focused verification succeeds.
+- Report changed files, commands executed, and checks not completed.
+```
+
+The `/init` command can generate an initial `AGENTS.md`, but review and shorten it before normal use.
+
+### Start OpenCode
+
+From the Spring Boot project root:
+
+```bash
+opencode
+```
+
+The configured `plan` agent starts automatically.
+
+### Plan a Spring Boot Change
+
+The planning prompt should name the exact feature, failure, or migration scope.
+
+Example:
+
+```text
+Analyze why UserController returns HTTP 500 when the user is not found.
+
+Inspect only:
+- @pom.xml
+- @src/main/java/com/example/user/UserController.java
+- @src/main/java/com/example/user/UserService.java
+- the related exception handler
+- the related tests
+
+Do not edit files.
+
+Return:
+1. the root cause;
+2. the minimum files that must change;
+3. the smallest safe implementation plan;
+4. the focused test command.
+```
+
+For a compilation problem:
+
+```text
+Analyze the compilation error involving RestTemplateBuilder.
+
+Inspect only pom.xml, the HTTP client configuration, direct usages, and related
+tests. Do not edit files. Identify the exact API change and propose the minimum
+migration.
+```
+
+The plan should establish the relevant files before switching to `build`, because this configuration prevents the build agent from invoking subagents.
+
+### Implement the Approved Plan
+
+Switch to the `build` agent and use a constrained prompt:
+
+```text
+Implement only the approved plan.
+
+Do not modify unrelated classes, dependencies, configuration, or tests.
+Do not perform opportunistic refactoring.
+Run the focused verification first.
+Show the final diff and briefly explain each changed file.
+```
+
+The build agent asks before edits and most shell commands. Review each approval request instead of approving broad command patterns automatically.
+
+### Maven Verification
+
+Linux, macOS, or WSL:
+
+```bash
+# Compile production code without running tests.
+./mvnw -DskipTests compile
+
+# Run one test class.
+./mvnw -Dtest=UserServiceTest test
+
+# Run one test method.
+./mvnw -Dtest=UserServiceTest#shouldReturnUser test
+
+# Run the normal test suite.
+./mvnw test
+
+# Run packaging and integration-test lifecycle checks when required.
+./mvnw verify
+```
+
+Windows PowerShell:
+
+```powershell
+# Compile production code without running tests.
+.\mvnw.cmd -DskipTests compile
+
+# Run one test class.
+.\mvnw.cmd -Dtest=UserServiceTest test
+
+# Run one test method.
+.\mvnw.cmd "-Dtest=UserServiceTest#shouldReturnUser" test
+
+# Run the normal test suite.
+.\mvnw.cmd test
+
+# Run packaging and integration-test lifecycle checks when required.
+.\mvnw.cmd verify
+```
+
+Start the application with a local Spring profile:
+
+Linux, macOS, or WSL:
+
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+Windows PowerShell:
+
+```powershell
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
+```
+
+Do not start production profiles or connect to production services unless that action is explicitly required and approved.
+
+### Gradle Verification
+
+Linux, macOS, or WSL:
+
+```bash
+./gradlew test
+./gradlew test --tests "com.example.user.UserServiceTest"
+./gradlew test --tests "com.example.user.UserServiceTest.shouldReturnUser"
+./gradlew build
+./gradlew bootRun
+```
+
+Windows PowerShell:
+
+```powershell
+.\gradlew.bat test
+.\gradlew.bat test --tests "com.example.user.UserServiceTest"
+.\gradlew.bat build
+.\gradlew.bat bootRun
+```
+
+### Recommended Verification Order
+
+Use the narrowest check that can detect the expected failure:
+
+```text
+1. Compile the affected code.
+2. Run the specific test method or class.
+3. Run tests for the affected module.
+4. Run the complete unit-test suite.
+5. Run verify or the full build only when integration or packaging checks matter.
+```
+
+This order reduces unnecessary command output and model context while still providing useful confidence.
+
+### Referencing Files Directly
+
+When the relevant file is known, reference it directly instead of requesting a repository-wide search:
+
+```text
+Explain the validation flow in
+@src/main/java/com/example/api/UserController.java.
+```
+
+For a multi-file change:
+
+```text
+Analyze only:
+@pom.xml
+@src/main/java/com/example/config/RestClientConfiguration.java
+@src/test/java/com/example/config/RestClientConfigurationTest.java
+```
+
+Direct references reduce exploratory tool calls and make the requested scope explicit.
+
+### Spring Boot Upgrade Workflow
+
+Do not handle a major Spring Boot upgrade as one unrestricted task. Split it into separate sessions:
+
+1. build file, parent, plugins, and dependency management;
+2. compilation errors;
+3. HTTP client configuration;
+4. Spring Security;
+5. persistence and database migrations;
+6. messaging and external integrations;
+7. test framework and test configuration;
+8. configuration-property changes;
+9. full verification and packaging.
+
+Example planning request:
+
+```text
+Analyze the Spring Boot upgrade in this session only for RestTemplateBuilder
+compilation failures.
+
+Do not analyze Spring Security, persistence, Spring Cloud, or unrelated
+dependencies. Inspect the build file, the affected configuration classes,
+direct usages, and related tests. Do not edit files.
+```
+
+After the plan is approved:
+
+```text
+Implement only the approved RestTemplateBuilder migration.
+Do not update unrelated dependencies.
+Run the smallest relevant test and show the final diff.
+```
+
+Start a new session for the next migration category so old errors, logs, and diffs are not repeatedly included in context.
+
+### Spring Boot Tasks That Fit This Workflow
+
+Good single-session tasks include:
+
+- fix one compilation error;
+- add or repair one REST endpoint;
+- adjust validation for one request model;
+- add one service method and its focused tests;
+- fix one repository query;
+- migrate one deprecated Spring API;
+- update one configuration-properties class;
+- diagnose one failing test class;
+- review one security rule;
+- update one dependency only when required by the task.
+
+Avoid prompts such as:
+
+```text
+Review the whole application and improve everything.
+```
+
+Prefer:
+
+```text
+Fix the null-handling behavior in UserService#getUser.
+Inspect only the service, its direct collaborators, and its tests.
+Do not refactor unrelated code.
+```
+
+### Protecting Spring Boot Secrets
+
+Common sensitive values include:
+
+- database passwords;
+- OAuth client secrets;
+- JWT signing keys;
+- cloud credentials;
+- SMTP passwords;
+- private repository tokens;
+- production URLs containing credentials.
+
+Keep them outside source control and outside OpenCode prompts. Use environment variables, secret managers, or local files denied by the configuration.
+
+A safe example file may document variable names without real values:
+
+```properties
+SPRING_DATASOURCE_URL=
+SPRING_DATASOURCE_USERNAME=
+SPRING_DATASOURCE_PASSWORD=
+```
+
+Do not ask OpenCode to print the resolved Spring environment or dump all environment variables.
+
 
 ## How Token Consumption Is Reduced
 
@@ -739,6 +1205,9 @@ Keep real secret files untracked and protected by both source-control ignore rul
 
 ## References
 
+- OpenCode download: https://opencode.ai/download
+- OpenCode Windows and WSL: https://opencode.ai/docs/windows-wsl/
+- OpenCode IDE integration: https://opencode.ai/docs/ide/
 - OpenCode configuration: https://opencode.ai/docs/config/
 - OpenCode agents: https://opencode.ai/docs/agents/
 - OpenCode permissions: https://opencode.ai/docs/permissions/
